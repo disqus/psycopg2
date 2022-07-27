@@ -55,7 +55,7 @@ from distutils.command.build_ext import build_ext
 from distutils.sysconfig import get_python_inc
 from distutils.ccompiler import get_default_compiler
 
-PSYCOPG_VERSION = '2.0.14'
+PSYCOPG_VERSION = '2.0.14-disqus'
 version_flags   = ['dt', 'dec']
 
 PLATFORM_IS_WINDOWS = sys.platform.lower().startswith('win')
@@ -221,12 +221,20 @@ class psycopg_build_ext(build_ext):
             except:
                 pgversion = "7.4.0"
 
-            verre = re.compile(r"(\d+)\.(\d+)(?:(?:\.(\d+))|(devel|(alpha|beta|rc)\d+))")
+            verre = re.compile(r"(\d+)(?:\.(\d+))?(?:(?:\.(\d+))|(devel|(?:alpha|beta|rc)\d+))?")
             m = verre.match(pgversion)
             if m:
                 pgmajor, pgminor, pgpatch = m.group(1, 2, 3)
+                # Postgres >= 10 doesn't have pgminor anymore.
+                pgmajor = int(pgmajor)
+                if pgmajor >= 10:
+                    pgminor, pgpatch = None, pgminor
+                if pgminor is None or not pgminor.isdigit():
+                    pgminor = 0
                 if pgpatch is None or not pgpatch.isdigit():
                     pgpatch = 0
+                pgminor = int(pgminor)
+                pgpatch = int(pgpatch)
             else:
                 sys.stderr.write(
                     "Error: could not determine PostgreSQL version from '%s'"
